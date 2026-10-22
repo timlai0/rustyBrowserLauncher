@@ -1,0 +1,170 @@
+import { ScrollView, Button, CheckBox } from "std-widgets.slint";
+
+export struct Row {
+    title: string,
+    subtitle: string,
+    letter: string,
+    accent: color,
+}
+
+component RowItem inherits Rectangle {
+    in property <Row> item;
+    in property <int> index;
+    callback clicked;
+
+    height: 56px;
+    border-radius: 8px;
+    background: ta.has-hover ? #2e3750 : #232a3a;
+    animate background { duration: 100ms; }
+
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    HorizontalLayout {
+        padding: 10px;
+        spacing: 12px;
+
+        Rectangle {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: item.accent;
+            Text {
+                text: item.letter;
+                color: white;
+                font-size: 18px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            Text {
+                text: item.title;
+                color: #e8ecf4;
+                font-size: 14px;
+                font-weight: 600;
+                overflow: elide;
+            }
+            Text {
+                text: item.subtitle;
+                color: #8d97ad;
+                font-size: 12px;
+                overflow: elide;
+            }
+        }
+
+        Text {
+            text: root.index < 9 ? "\{root.index + 1}" : "";
+            color: #5d6784;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    title: "Rusty Browser Launcher";
+    background: #151a26;
+    preferred-width: 460px;
+    preferred-height: 600px;
+    min-width: 380px;
+    min-height: 360px;
+
+    in property <string> url;
+    in property <[Row]> rows;
+    in property <bool> is-default;
+    in property <string> status;
+    in-out property <bool> private-mode;
+
+    callback launch(int);
+    callback register();
+    callback unregister();
+    callback key(string);
+
+    fs := FocusScope {
+        key-pressed(e) => {
+            root.key(e.text);
+            accept
+        }
+
+        VerticalLayout {
+            padding: 16px;
+            spacing: 12px;
+
+            Text {
+                text: "Open with";
+                color: #e8ecf4;
+                font-size: 20px;
+                font-weight: 700;
+            }
+
+            Rectangle {
+                height: 32px;
+                border-radius: 6px;
+                background: #0e121b;
+                Text {
+                    x: 10px;
+                    width: parent.width - 20px;
+                    text: root.url == "" ? "No link — pick a browser to open it directly" : root.url;
+                    color: #8d97ad;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+
+            ScrollView {
+                vertical-stretch: 1;
+                VerticalLayout {
+                    spacing: 6px;
+                    for r[i] in root.rows: RowItem {
+                        item: r;
+                        index: i;
+                        clicked => { root.launch(i); }
+                    }
+                }
+            }
+
+            CheckBox {
+                text: "Private / incognito window";
+                checked <=> root.private-mode;
+            }
+
+            Rectangle {
+                height: 1px;
+                background: #2a3248;
+            }
+
+            HorizontalLayout {
+                spacing: 10px;
+                Text {
+                    horizontal-stretch: 1;
+                    text: root.status != "" ? root.status
+                        : root.is-default ? "✓ Default browser" : "Not the default browser";
+                    color: root.is-default ? #5fd38d : #8d97ad;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                    wrap: word-wrap;
+                }
+                Button {
+                    text: root.is-default ? "Unregister" : "Set as default…";
+                    clicked => {
+                        if (root.is-default) {
+                            root.unregister();
+                        } else {
+                            root.register();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    init => { fs.focus(); }
+}
